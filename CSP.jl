@@ -1,43 +1,67 @@
 function BranchAndPrune(Prune!,D::Array{Array{Int64,1},1})::Void
-	L = [D]::Array{Array{Array{Int64,1},1},1}
+	L = [D]::Vector{Vector{Vector{Int64}}}
 	while !isempty(L)
-		E = pop!(L)::Array{Array{Int64,1},1}
-        if Prune!(E)
+		E = pop!(L)::Vector{Vector{Int64}}
+        if Prune!(E) #Renvoie un booléen si le noeud est faisable, 
+                     #Convention Julia : le "!" indique que certains des arguments de la fonction seront modifiés
+                     #Ce sera le cas si on utilise une fonction de pruning au lieu de la fonction de backtrack.
 			if isSolution(E) #true si tous les domaines sont de taille 1
-                !BackTrackNQueens(E) && println("!backtrack but isolution : ",E)
-				process(E)
+				process(E) #affiche la solution (si décommenté) et incrémente le compteur
 			else
-				#indice du plus petit domaine de taille >= 2
+				#x_i = indice du plus petit domaine de taille >= 2
                 x_i = indmin(map(elt -> length(elt) <= 1 ? typemax(Int) : length(elt), E))::Int
-				for v in E[x_i]
-					F = deepcopy(E)
-					F[x_i] = [v]
-					push!(L,F)
+				for v in E[x_i] #Pour chaque valeur v dans le domaine de la variable
+					F = deepcopy(E) #On fait une copie des domaines (F)
+					F[x_i] = [v] #Et on fixe la variable x_i à la valeur v
+					push!(L,F) #On ajoute F à la liste des noeuds à explorer (L)
 				end
 			end
         end
 	end
-    return nothing
+    return
 end
 
 function process(F)::Void
 	# println(map(x -> x[1],F))
     global cpt += 1
-    return nothing
+    return
 end
 
+#Teste deux à deux toutes les variables fixées, renvoie false si conflit
 function BackTrackNQueens(E)::Bool
-    @inbounds begin
-        #Pour toutes les variables i < j fixées
-        for i = 1:length(E - 1)
-            if length(E[i]) == 1
-                vi= E[i][1]
-                for j = i+1:length(E)
-                    if length(E[j]) == 1 
-                        vj=E[j][1] #
-                        #Si conflit , return false
-                        vi==vj && return false
-                        abs(vi-vj) == j-i && return false
+    #Pour toutes les variables i < j fixées
+    for i = 1:length(E - 1)
+        if length(E[i]) == 1
+            vi= E[i][1]
+            for j = i+1:length(E)
+                if length(E[j]) == 1 
+                    vj=E[j][1] #
+                    #Si conflit , return false
+                    vi==vj && return false
+                    abs(vi-vj) == j-i && return false
+                end
+            end
+        end
+    end
+    return true
+end
+
+function PruneNQueens!(E)::Bool
+    stop = false
+    while !stop
+        stop = true
+        for i = 1:length(E) #Pour toutes les variables
+            if length(E[i]) == 1 #Si une variable i est fixée...
+                vi = E[i][1]
+                for j = 1:length(E) #Pour toutes les variables j != i
+                    if j != i 
+                        #Retirer toutes les valeurs incompatibles du domaine
+                        # filter!(vj -> vj!=vi && abs(vi-vj)!=abs(j-i) , E[j])
+                        incompatibles = find(vj -> vj==vi || abs(vi-vj)==abs(j-i) ,E[j])
+                        if !isempty(incompatibles)
+                            stop = false
+                            deleteat!(E[j], incompatibles)
+                        end
                     end
                 end
             end
@@ -46,83 +70,23 @@ function BackTrackNQueens(E)::Bool
     return all(x -> length(x) >= 1, E)
 end
 
-function PruneNQueens!(E)::Bool
-    if !BackTrackNQueens(E) #Gain de temps
-        return false
-    end
-    @inbounds begin
-        for i = 1:length(E) #Pour toutes les variables
-            if length(E[i]) == 1 #Si une variable i est fixée...
-                vi = E[i][1]
-                for j = 1:length(E) #Pour toutes les variables j != i
-                    if j != i 
-                        #Retirer toutes les valeurs incompatibles du domaine
-                        filter!(vj -> vj!=vi && abs(vi-vj)!=abs(j-i) , E[j])
-                    end
-                end
-            end
-        end
-    end
-    return BackTrackNQueens(E)
+isSolution(E) = all(x->length(x)==1, E)
+
+
+
+### MAIN ENTRY POINT ###
+
+if length(ARGS) >= 1
+    nb_queens = eval(parse(ARGS[1]))
+else
+    nb_queens = 4
 end
 
-function PruneNQueens2!(E)::Bool
-    !PruneNQueens!(E) && return false
-    @inbounds begin
-        for i = 1:length(E-1) #Pour toutes les variables
-            if length(E[i]) == 2 #
-                for j = i+1:length(E) #Pour toutes les variables j > i
-                    if j != i && E[i] == E[j]
-                        for k = 1:length(E)
-                            if k != i && k!=j
-                                #Retirer ces valeurs des autres domaines
-                                filter!(vk -> vk!=E[i][1] && vk!=E[i][2], E[k])
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return BackTrackNQueens(E)
-end
-
-function PruneNQueens3!(E)::Bool
-    !PruneNQueens2!(E) && return false
-    @inbounds begin
-        for i = 1:length(E-1) #Pour toutes les variables
-            if length(E[i]) == 3 #
-                for j = i+1:length(E-1) #Pour toutes les variables j > i
-                    if E[i] == E[j]
-                        for k = j+1:length(E)
-                            if E[j] == E[k]
-                                for l = 1:length(E)
-                                    if l!= i && l!=j && l!=k
-                                        #Retirer ces valeurs des autres domaines
-                                        filter!(vl -> vl!=E[i][1] && vl!=E[i][2] && vl!=E[i][3], E[l])
-                                    end
-                                end
-                            end
-                        end
-                    end
-                end
-            end
-        end
-    end
-    return BackTrackNQueens(E)
-end
-
-function isSolution(E)
-	all(x->length(x)==1, E)
-end
-
-
-cpt = 0
-for n = 11:12
+cpt=0
+for n = nb_queens
     println("###### $n queens ######")
-    const D = [[j for j=1:n] for i = 1:n]
+    const D = [[i for i=1:n] for j = 1:n]
 
-    cpt=0
     println("Backtrack : ")
     @time BranchAndPrune(BackTrackNQueens, D)
     println("$cpt solutions trouvées\n")
@@ -130,15 +94,5 @@ for n = 11:12
     cpt = 0
     println("Prune! : ")
     @time BranchAndPrune(PruneNQueens!, D)
-    println("$cpt solutions trouvées\n")
-
-    cpt = 0
-    println("Prune! + 2x2: ")
-    @time BranchAndPrune(PruneNQueens2!, D)
-    println("$cpt solutions trouvées\n")
-
-    cpt = 0
-    println("Prune! +2x2 + 3x3x3: ")
-    @time BranchAndPrune(PruneNQueens3!, D)
     println("$cpt solutions trouvées\n")
 end
