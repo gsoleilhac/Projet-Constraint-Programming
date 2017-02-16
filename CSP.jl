@@ -2,7 +2,7 @@ function BranchAndPrune(Prune!,D::Array{Array{Int64,1},1})::Void
 	L = [D]::Vector{Vector{Vector{Int64}}}
 	while !isempty(L)
 		E = pop!(L)::Vector{Vector{Int64}}
-        if Prune!(E) #Renvoie un booléen si le noeud est faisable, 
+        if Prune!(E) #Renvoie true si le noeud est faisable, 
                      #Convention Julia : le "!" indique que certains des arguments de la fonction seront modifiés
                      #Ce sera le cas si on utilise une fonction de pruning au lieu de la fonction de backtrack.
 			if isSolution(E) #true si tous les domaines sont de taille 1
@@ -77,7 +77,7 @@ isSolution(E) = all(x->length(x)==1, E)
 ### MAIN ENTRY POINT ###
 
 if length(ARGS) >= 1
-    nb_queens = eval(parse(ARGS[1]))
+    nb_queens = eval(parse(ARGS[1])) #Permet de passer un entier en paramètre ou un range (1:10)
 else
     nb_queens = 4
 end
@@ -85,8 +85,9 @@ end
 cpt=0
 for n = nb_queens
     println("###### $n queens ######")
-    const D = [[i for i=1:n] for j = 1:n]
+    const D = [[i for i=1:n] for j = 1:n] #Génération des domaines initiaux des variables
 
+    cpt=0
     println("Backtrack : ")
     @time BranchAndPrune(BackTrackNQueens, D)
     println("$cpt solutions trouvées\n")
