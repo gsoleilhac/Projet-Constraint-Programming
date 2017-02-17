@@ -1,3 +1,8 @@
+#Compilation et exécution: 
+#julia CSP.jl 10 pour résoudre avec 10 reines
+#julia CSP.jl 5:8 pour résoudre de de 5 à 8 reines
+#julia CSP.jl par défaut, résoud pour 4 reines
+
 function BranchAndPrune(Prune!,D::Array{Array{Int64,1},1})::Void
 	L = [D]::Vector{Vector{Vector{Int64}}}
 	while !isempty(L)
@@ -84,16 +89,20 @@ end
 
 cpt=0
 for n = nb_queens
-    println("###### $n queens ######")
-    const D = [[i for i=1:n] for j = 1:n] #Génération des domaines initiaux des variables
+    if n > 0
+        println("###### $n queens ######")
+        const D = [[i for i=1:n] for j = 1:n] #Génération des domaines initiaux des variables
 
-    cpt=0
-    println("Backtrack : ")
-    @time BranchAndPrune(BackTrackNQueens, D)
-    println("$cpt solutions trouvées\n")
+        #D[1] = [i for i = 1:ceil(Int,n/2)] #Cassage de symmétries
 
-    cpt = 0
-    println("Prune! : ")
-    @time BranchAndPrune(PruneNQueens!, D)
-    println("$cpt solutions trouvées\n")
+        cpt=0
+        println("Backtrack : ")
+        @time BranchAndPrune(BackTrackNQueens, D)
+        println("$cpt solutions trouvées\n")
+
+        cpt = 0
+        println("Prune! : ")
+        @time BranchAndPrune(PruneNQueens!, D)
+        println("$cpt solutions trouvées\n")
+    end
 end
