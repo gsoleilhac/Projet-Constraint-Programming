@@ -26,14 +26,14 @@ function BranchAndPrune(Prune!,D::Array{Array{Int64,1},1})::Void
     return
 end
 
-function process(F)::Void
+function process(F::Vector{Vector{Int64}})::Void
 	# println(map(x -> x[1],F))
     global cpt += 1
     return
 end
 
 #Teste deux à deux toutes les variables fixées, renvoie false si conflit
-function BackTrackNQueens(E)::Bool
+function BackTrackNQueens(E::Vector{Vector{Int64}})::Bool
     #Pour toutes les variables i < j fixées
     for i = 1:length(E - 1)
         if length(E[i]) == 1
@@ -51,7 +51,7 @@ function BackTrackNQueens(E)::Bool
     return true
 end
 
-function PruneNQueens!(E)::Bool
+function PruneNQueens!(E::Vector{Vector{Int64}})::Bool
     stop = false
     while !stop
         stop = true
@@ -75,8 +75,43 @@ function PruneNQueens!(E)::Bool
     return all(x -> length(x) >= 1, E)
 end
 
-isSolution(E) = all(x->length(x)==1, E)
+isSolution(E::Vector{Vector{Int64}}) = all(x->length(x)==1, E)
 
+
+function BoundsConsistencyNQueens!(E::Vector{Vector{Int64}})::Bool
+    !PruneNQueens!(E) && return false
+
+    N = length(E)
+    for i = 1:N
+        for j = i:N
+            I = i:j
+            SI = []
+            for k = 1:N
+                if E[k][1] >= i && E[k][end] <= j
+                    push!(SI, k)
+                end
+            end
+
+            #If I is a Hall Interval
+            if length(SI) == j-i+1  
+                for k = 1:N
+                    if !(k in SI)
+                        while !isempty(E[k]) && E[k][1] in I
+                            shift!(E[k])
+                        end
+
+                        while !isempty(E[k]) && E[k][end] in I
+                            pop!(E[k])
+                        end
+
+                        isempty(E[k]) && return false
+                    end
+                end
+            end
+        end
+    end
+    return PruneNQueens!(E)
+end
 
 
 ### MAIN ENTRY POINT ###
@@ -103,6 +138,11 @@ for n = nb_queens
         cpt = 0
         println("Prune! : ")
         @time BranchAndPrune(PruneNQueens!, D)
+        println("$cpt solutions trouvées\n")
+
+        cpt = 0
+        println("Bounds : ")
+        @time BranchAndPrune(BoundsConsistencyNQueens!, D)
         println("$cpt solutions trouvées\n")
     end
 end
