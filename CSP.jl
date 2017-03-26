@@ -79,7 +79,7 @@ isSolution(E::Vector{Vector{Int64}}) = all(x->length(x)==1, E)
 
 
 function BoundsConsistencyNQueens!(E::Vector{Vector{Int64}})::Bool
-    !PruneNQueens!(E) && return false
+    # !PruneNQueens!(E) && return false
 
     N = length(E)
     for i = 1:N
